@@ -34,12 +34,17 @@ func NewOllamaClient(modelName string) *OllamaClient {
 		baseURL = "http://localhost:11434"
 	}
 	if modelName == "" {
-		modelName = "gemma2" // Recommended default local Google model
+		modelName = "gemma4" // Recommended default local Google model
 	}
 	return &OllamaClient{
 		baseURL:   baseURL,
 		modelName: modelName,
 	}
+}
+
+// ModelName returns the resolved model name being used by the client.
+func (o *OllamaClient) ModelName() string {
+	return o.modelName
 }
 
 // GenerateBrief queries the local Ollama server to get a code-evolution brief.

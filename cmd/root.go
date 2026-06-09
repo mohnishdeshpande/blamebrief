@@ -20,6 +20,7 @@ var (
 	linesFlag      string
 	detailFlag     string
 	localFlag      bool
+	providerFlag   string
 	modelFlag      string
 	clearCacheFlag bool
 	rawFlag        bool
@@ -31,9 +32,8 @@ var RootCmd = &cobra.Command{
 	Use:   "blamebrief [file path]",
 	Short: "BlameBrief is an AI-powered software archeology CLI tool that deciphers code history.",
 	Long: `BlameBrief goes beyond 'git blame'. It extracts the deep chronological git history
-and evolution of a specific code block, and pipes it into Gemini (via Vertex AI / Google AI Studio) 
-or a local Gemma model (via Ollama) to analyze why the code was written this way, 
-its intent, and hidden risks (Chesterton's Fence).`,
+and evolution of a specific code block, and pipes into an AI provider (Gemini, Claude, GPT, or Ollama) 
+to analyze why the code was written this way, its intent, and hidden risks (Chesterton's Fence).`,
 	Args: cobra.ExactArgs(1),
 	RunE: runBlameBrief,
 }
@@ -41,8 +41,9 @@ its intent, and hidden risks (Chesterton's Fence).`,
 func init() {
 	RootCmd.Flags().StringVarP(&linesFlag, "lines", "l", "", "Line range to analyze (e.g., '10-45' or '25'). If omitted, analyzes the whole file.")
 	RootCmd.Flags().StringVarP(&detailFlag, "detail", "d", "high", "Level of detail for the report (high, medium, low)")
-	RootCmd.Flags().BoolVar(&localFlag, "local", false, "Use local Ollama instance running Gemma instead of Vertex AI / Google AI Studio")
-	RootCmd.Flags().StringVar(&modelFlag, "model", "", "Override default AI model name (e.g. 'gemini-3.1-pro', 'gemini-3.1-flash-lite', 'gemma2')")
+	RootCmd.Flags().BoolVar(&localFlag, "local", false, "Use local Ollama instance running Gemma (shorthand for --provider ollama)")
+	RootCmd.Flags().StringVarP(&providerFlag, "provider", "p", "", "AI provider to use (gemini, openai, claude, ollama)")
+	RootCmd.Flags().StringVar(&modelFlag, "model", "", "Override default AI model name (e.g. 'gemini-1.5-pro', 'gpt-4o', 'claude-3-5-sonnet-20240620')")
 	RootCmd.Flags().BoolVar(&clearCacheFlag, "clear-cache", false, "Clear the local blamebrief cache before running")
 	RootCmd.Flags().BoolVar(&rawFlag, "raw", false, "Output the raw gathered Git history context package as Markdown (No AI)")
 	RootCmd.Flags().BoolVar(&jsonFlag, "json", false, "Output the structured Git history context package as JSON (No AI)")
@@ -165,25 +166,21 @@ Detail Level: %s`,
 
 	// 7. Execute AI Generation
 	ctx := context.Background()
-	var brief string
 
-	if localFlag {
-		fmt.Printf("[blamebrief] Querying local Ollama (%s)... This may take a moment.\n", modelFlag)
-		ollamaClient := ai.NewOllamaClient(modelFlag)
-		brief, err = ollamaClient.GenerateBrief(ctx, systemInstruction, prompt)
-		if err != nil {
-			return fmt.Errorf("local Gemma analysis failed: %w", err)
-		}
-	} else {
-		geminiClient, err := ai.NewGeminiClient(ctx, modelFlag)
-		if err != nil {
-			return err
-		}
-		fmt.Printf("[blamebrief] Sending long-context history to Gemini (%s)... This may take a moment.\n", geminiClient.ModelName())
-		brief, err = geminiClient.GenerateBrief(ctx, systemInstruction, prompt)
-		if err != nil {
-			return fmt.Errorf("Gemini analysis failed: %w", err)
-		}
+	// Determine provider
+	if providerFlag == "" {
+		providerFlag = ai.GetDefaultProviderName(localFlag)
+	}
+
+	p, err := ai.NewProvider(ctx, providerFlag, modelFlag)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("[blamebrief] Querying %s (%s)... This may take a moment.\n", providerFlag, p.ModelName())
+	brief, err := p.GenerateBrief(ctx, systemInstruction, prompt)
+	if err != nil {
+		return fmt.Errorf("%s analysis failed: %w", providerFlag, err)
 	}
 
 	// 8. Cache the result

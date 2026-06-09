@@ -28,7 +28,7 @@ BlameBrief follows a clean, decoupled, and unidirectional data-flow architecture
        v                                v                        v
 +--------------+               +--------+-------+        +---------------+
 |   pkg/git    |               |   pkg/cache    |        |    pkg/ai     |
-| (Extraction) |               |   (Caching)    |        | (Gemini/Oll.) |
+| (Extraction) |               |   (Caching)    |        | (Multi-Prov.) |
 +--------------+               +----------------+        +---------------+
 ```
 
@@ -41,7 +41,7 @@ The codebase is organized into four main layers:
 ### 1. The Orchestration Layer (`cmd/`)
 *   **Core Logic:** Defined in `cmd/root.go` using `spf13/cobra`.
 *   **Responsibilities:**
-    *   Exposes and parses CLI arguments and flags (`--lines`, `--detail`, `--local`, `--model`, `--clear-cache`).
+    *   Exposes and parses CLI arguments and flags (`--lines`, `--detail`, `--provider`, `--model`, `--clear-cache`).
     *   Applies strict input validation (ensuring target file exists, ranges are numeric, and bounds are valid).
     *   Orchestrates execution flow by invoking the Git extractor, checking the cache, dispatching prompt payloads to AI clients, and displaying final outputs.
 
@@ -62,10 +62,15 @@ The codebase is organized into four main layers:
     *   **Auto-Invalidation:** If a developer makes local, uncommitted changes to the code segment, the *Current Line Code Contents* change, invalidating the cache instantly. If they checkout a different branch or pull updates, the *HEAD Commit Hash* changes, also invalidating the cache. This ensures briefs are blazing fast (under 20ms) yet 100% accurate.
 
 ### 4. The Intelligence Layer (`pkg/ai/`)
-*   **Core Logic:** Decoupled into `gemini.go` (Cloud) and `ollama.go` (Local Fallback).
+*   **Core Logic:** Decoupled using a common `Provider` interface, allowing hot-swapping between multiple cloud and local models.
 *   **Responsibilities:**
-    *   **Cloud Driver (`pkg/ai/gemini.go`):** Integrates the official, modern `google.golang.org/genai` Go SDK. It supports both **Google AI Studio** (using standard API keys) and **Google Cloud Vertex AI** (using GCP projects and region variables) via a unified interface. Defaults to **`gemini-3.5-flash`** for optimal speed and context length.
-    *   **Local Driver (`pkg/ai/ollama.go`):** Integrates a lightweight REST client calling a local Ollama API server. This fallback supports running state-of-the-art **Gemma 4** models locally and offline, ensuring sensitive enterprise files never leave the machine.
+    *   **Unified Interface (`pkg/ai/provider.go`):** Defines the standard `GenerateBrief` and `ModelName` methods that all clients must implement.
+    *   **Provider Factory (`pkg/ai/factory.go`):** Handles the instantiation of the correct client based on the `--provider` flag and environment variables.
+    *   **Supported Providers:**
+        *   **Gemini (`pkg/ai/gemini.go`):** Integrates Google's Gemini models via the official SDK. Supports Vertex AI and Google AI Studio.
+        *   **OpenAI (`pkg/ai/openai.go`):** Integrates GPT models (defaulting to `gpt-4o`) via high-performance, zero-dependency HTTP calls.
+        *   **Claude (`pkg/ai/claude.go`):** Integrates Anthropic's Claude models (defaulting to `claude-3-5-sonnet-20240620`) via zero-dependency HTTP calls.
+        *   **Ollama (`pkg/ai/ollama.go`):** Local fallback for running Gemma or other models offline, ensuring data privacy.
 
 ---
 
@@ -99,7 +104,7 @@ The following sequence details how BlameBrief processes a single query:
                                 /        \
                                v          v
                             Serve       AI Dispatcher Layer (pkg/ai/)
-                            Instantly   (Query Gemini 3.5 / Local Gemma 4)
+                            Instantly   (Multi-Provider Dispatcher)
                             (<20ms)            ||
                                                || (Produce Markdown Report)
                                                \/
