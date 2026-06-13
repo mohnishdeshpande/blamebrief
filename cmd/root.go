@@ -42,7 +42,7 @@ func init() {
 	RootCmd.Flags().StringVarP(&linesFlag, "lines", "l", "", "Line range to analyze (e.g., '10-45' or '25'). If omitted, analyzes the whole file.")
 	RootCmd.Flags().StringVarP(&detailFlag, "detail", "d", "high", "Level of detail for the report (high, medium, low)")
 	RootCmd.Flags().BoolVar(&localFlag, "local", false, "Use local Ollama instance running Gemma (shorthand for --provider ollama)")
-	RootCmd.Flags().StringVarP(&providerFlag, "provider", "p", "", "AI provider to use (gemini, openai, claude, ollama)")
+	RootCmd.Flags().StringVarP(&providerFlag, "provider", "p", "", "AI provider to use (gemini, openai, claude, bedrock, azure, copilot, codex, claude-code, ollama)")
 	RootCmd.Flags().StringVar(&modelFlag, "model", "", "Override default AI model name (e.g. 'gemini-1.5-pro', 'gpt-4o', 'claude-3-5-sonnet-20240620')")
 	RootCmd.Flags().BoolVar(&clearCacheFlag, "clear-cache", false, "Clear the local blamebrief cache before running")
 	RootCmd.Flags().BoolVar(&rawFlag, "raw", false, "Output the raw gathered Git history context package as Markdown (No AI)")

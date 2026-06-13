@@ -15,6 +15,14 @@ func NewProvider(ctx context.Context, providerName string, modelName string) (Pr
 		return NewOpenAIClient(modelName)
 	case "claude":
 		return NewClaudeClient(modelName)
+	case "bedrock":
+		return NewBedrockClaudeClient(modelName), nil
+	case "azure":
+		return NewAzureOpenAIClient(modelName)
+	case "copilot", "codex":
+		return NewCopilotProvider(), nil
+	case "claude-code":
+		return NewClaudeCodeProvider(), nil
 	case "ollama":
 		return NewOllamaClient(modelName), nil
 	default:

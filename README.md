@@ -11,6 +11,8 @@
     *   **Google Gemini** (via Vertex AI or AI Studio)
     *   **OpenAI GPT-4o**
     *   **Anthropic Claude 3.5 Sonnet**
+    *   **Enterprise AI:** AWS Bedrock (Claude) and Azure OpenAI (GPT)
+    *   **Delegated CLI:** Leverages already-authenticated `gh copilot` or `claude` (Claude Code) in your environment.
     *   **Local Models** via Ollama (e.g., Gemma4, Llama3)
 *   **🏎️ Intelligent SHA256 Caching:** Automatically hashes the relative file path, line range, current Git HEAD, *and* the actual lines of code. Bypasses the cache if you make local, uncommitted changes, ensuring briefs are lightning fast (under 20ms) yet always accurate.
 *   **🛠️ Zero UI, CLI-First Design:** Clean, standard-output markdown text perfect for terminal piping and dev workflows.
@@ -61,6 +63,17 @@ Ensure [Ollama](https://ollama.com) is running:
 ollama pull gemma4
 ```
 
+### 5. Enterprise & Delegated (No API Keys required for Delegated)
+```bash
+# AWS Bedrock
+export AWS_REGION="us-east-1"
+# Azure OpenAI
+export AZURE_OPENAI_ENDPOINT="https://..."
+
+# For Delegated (gh copilot / claude code), no keys needed if already logged in:
+# ./blamebrief [file] --provider copilot
+```
+
 ---
 
 ## 📖 Usage & Commands
@@ -74,7 +87,7 @@ ollama pull gemma4
 | Flag | Shorthand | Type | Description | Default |
 | :--- | :--- | :--- | :--- | :--- |
 | `--lines` | `-l` | `string` | Line range to analyze (e.g., `10-45` or `25`). | *Entire File* |
-| `--provider` | `-p` | `string` | AI provider (`gemini`, `openai`, `claude`, `ollama`). | *Auto-detect* |
+| `--provider` | `-p` | `string` | AI provider (`gemini`, `openai`, `claude`, `bedrock`, `azure`, `copilot`, `codex`, `claude-code`, `ollama`). | *Auto-detect* |
 | `--model` | | `string` | Override the default model name. | *Provider default* |
 | `--detail` | `-d` | `string` | Level of detail (`high`, `medium`, `low`). | `high` |
 | `--local` | | `bool` | Shorthand for `--provider ollama`. | `false` |
